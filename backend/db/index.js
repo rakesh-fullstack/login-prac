@@ -14,8 +14,9 @@ const sequelize = new Sequelize(
 
 try {
   sequelize.authenticate();
-} catch {
-  console.log("erro");
+  console.log("file: index.js ~ Succesfully connected to SQL");
+} catch (err) {
+  console.log("file: index.js ~ line 21 ~ Error while connecting to sql", err);
 }
 
 module.exports = sequelize;

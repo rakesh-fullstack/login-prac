@@ -1,22 +1,14 @@
-const { Sequelize, DataTypes } = require("sequelize");
-const sequelize = new Sequelize("postgresql");
+const { DataTypes } = require("sequelize");
+const sequelize = require("./../db");
 
 const bcrypt = require("bcrypt");
 
 const User = sequelize.define(
-  "User",
+  "user",
   {
-    firstName: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    lastName: {
-      type: DataTypes.STRING,
-      // allowNull defaults to true
-    },
-    userName: {
-      type: DataTypes.STRING,
-      allowNull: false,
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
     },
     email: {
       type: DataTypes.STRING,
@@ -30,9 +22,16 @@ const User = sequelize.define(
         this.setDataValue(bcrypt.hash(data.password));
       },
     },
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
+    firstName: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    lastName: {
+      type: DataTypes.STRING,
+    },
+    userName: {
+      type: DataTypes.STRING,
+      allowNull: false,
     },
   },
   {
@@ -42,8 +41,15 @@ const User = sequelize.define(
 
 (async () => {
   await sequelize.sync({ force: true });
-  // Code here
 })();
+
+User.sync({ force: true })
+  .then((data) => {
+    console.log("User table succesfully created");
+  })
+  .catch((error) => {
+    console.log("Error syncing the User model");
+  });
 
 module.exports = {
   User,
