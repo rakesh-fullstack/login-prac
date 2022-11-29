@@ -1,4 +1,4 @@
-const { DataTypes } = require("sequelize");
+const { DataTypes, Model, fn } = require("sequelize");
 const sequelize = require("./../db");
 
 const bcrypt = require("bcrypt");
@@ -9,6 +9,7 @@ const User = sequelize.define(
     id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
+      autoIncrement: true,
     },
     email: {
       type: DataTypes.STRING,
@@ -19,7 +20,13 @@ const User = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
       set(value) {
-        this.setDataValue(bcrypt.hash(data.password));
+        const salt = bcrypt.genSaltSync(12);
+        const hash = bcrypt.hashSync(value, salt);
+        this.setDataValue("password", hash);
+        console.log(value, hash);
+      },
+      get() {
+        return null;
       },
     },
     firstName: {
@@ -39,11 +46,7 @@ const User = sequelize.define(
   }
 );
 
-(async () => {
-  await sequelize.sync({ force: true });
-})();
-
-User.sync({ force: true })
+User.sync({ alter: true })
   .then((data) => {
     console.log("User table succesfully created");
   })

@@ -3,7 +3,7 @@ const dotenv = require("dotenv");
 const morgan = require("morgan");
 const cors = require("cors");
 
-const UserRouter = require("./routes/UserRoute");
+const UserRouter = require("./routes/userRoute");
 
 dotenv.config();
 
@@ -16,6 +16,8 @@ app.use(express.json());
 app.use("/health", (req, res) => {
   res.status(200).send("System is Up");
 });
+
+app.use("/user/", UserRouter);
 
 app.listen(PORT, () => {
   console.log(`Server started on Port: ${PORT}`);
