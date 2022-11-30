@@ -109,14 +109,12 @@ const getUserDetails = async (req, res) => {
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
-    const message = `<h1> User reset password template, Click on the link to reset password </h1>`;
-    const t = await sendMail({
+    const message = `User reset password template, Click on the link to reset password`;
+    await sendMail({
       to: email,
       subject: "Password reset request",
       text: message,
     });
-
-    console.log(t);
 
     res.status(200).json({
       status: "success",
@@ -148,26 +146,33 @@ const resetPassword = async (req, res) => {
 };
 
 const sendEmailVerificationOTP = async (req, res) => {
-  const { email } = req.body;
-  const otp = generateOTP();
+  try {
+    const { email } = req.body;
+    const otp = generateOTP();
 
-  await Otp.create({
-    otp: otp,
-    type: "email",
-    email: email,
-  });
+    await Otp.create({
+      otp: otp,
+      type: "email",
+      email: email,
+    });
 
-  const message = `Use this OTP ${otp} to verify email </h1>`;
-  await sendMail({
-    to: email,
-    subject: "Verify email otp",
-    text: message,
-  });
+    const message = `Use this OTP ${otp} to verify email>`;
+    await sendMail({
+      to: email,
+      subject: "Verify email otp",
+      text: message,
+    });
 
-  res.status(200).json({
-    status: "success",
-    message: "Email Otp sent",
-  });
+    res.status(200).json({
+      status: "success",
+      message: "Email Otp sent",
+    });
+  } catch (err) {
+    res.status(200).json({
+      status: "error",
+      message: "Error while sending the mail",
+    });
+  }
 };
 
 const verifyEmail = async (req, res) => {
@@ -190,29 +195,37 @@ const verifyEmail = async (req, res) => {
   // update isEmailVerified in user table
   return res.status(200).json({
     status: "success",
-    message: "Correct OTP, mobile verified",
+    message: "Correct OTP, Email verified",
   });
 };
 
 const sendMobileVerificationOTP = async (req, res) => {
-  const { mobile } = req.body;
-  const otp = generateOTP();
+  try {
+    const { mobile } = req.body;
+    const otp = generateOTP();
 
-  await Otp.create({
-    otp: otp,
-    type: "mobile",
-    mobile: mobile,
-  });
+    await Otp.create({
+      otp: otp,
+      type: "mobile",
+      mobile: mobile,
+    });
 
-  sendMessage({
-    message: `Your OTP is ${otp}`,
-    contactNumber: mobile,
-  });
+    sendMessage({
+      message: `Your OTP is ${otp}`,
+      contactNumber: mobile,
+    });
 
-  res.status(200).json({
-    status: "success",
-    message: "Mobile Otp sent",
-  });
+    res.status(200).json({
+      status: "success",
+      message: "Mobile Otp sent",
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      status: "error",
+      message: "Error while sending the mail",
+    });
+  }
 };
 
 const verifyMobile = async (req, res) => {
@@ -223,7 +236,6 @@ const verifyMobile = async (req, res) => {
     order: [["createdAt", "DESC"]],
     raw: true,
   });
-  console.log(otp);
   const sentOtp = otp.otp;
 
   if (sentOtp != userOtp) {
