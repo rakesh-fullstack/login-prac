@@ -1,4 +1,4 @@
-const { DataTypes, Model, fn } = require("sequelize");
+const { DataTypes } = require("sequelize");
 const sequelize = require("./../db");
 
 const bcrypt = require("bcrypt");
@@ -12,6 +12,11 @@ const User = sequelize.define(
       autoIncrement: true,
     },
     email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
+    mobile: {
       type: DataTypes.STRING,
       allowNull: false,
       unique: true,
@@ -40,13 +45,27 @@ const User = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    resetLink: {
+      type: DataTypes.STRING,
+      defaultValue: "",
+    },
+    isMobileVerified: {
+      defaultValue: "N",
+      type: DataTypes.STRING,
+      enum: ["Y", "N"],
+    },
+    isEmailVerified: {
+      defaultValue: "N",
+      type: DataTypes.STRING,
+      enum: ["Y", "N"],
+    },
   },
   {
     tableName: "users",
   }
 );
 
-User.sync({ alter: true })
+User.sync({ force: true })
   .then((data) => {
     console.log("User table succesfully created");
   })
