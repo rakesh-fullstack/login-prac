@@ -10,8 +10,8 @@ const {
   verifyEmail,
   sendMobileVerificationOTP,
   verifyMobile,
-} = require("../controller/user");
-const { authenticate } = require("../middleware/checkAuth");
+} = require("../controllers/user-controller");
+const { authenticate } = require("../middlewares/auth-middleware");
 
 router.post("/register", register);
 router.get("/login", login);

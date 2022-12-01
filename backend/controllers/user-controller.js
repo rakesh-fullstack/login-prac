@@ -1,11 +1,12 @@
-const { User } = require("./../models/user.js");
-const { Otp } = require("./../models/otp.js");
+const { User } = require("../models/user.js");
+const { Otp } = require("../models/otp.js");
 const _ = require("lodash");
 const bcrypt = require("bcrypt");
-const { sendMail } = require("./../utils/sendEmail");
+const { sendMail } = require("../utils/sendEmail");
 const jwt = require("jsonwebtoken");
-const { generateOTP } = require("./../utils/otpHelper");
-const { sendMessage } = require("./../utils/sendMessage");
+const { generateOTP } = require("../utils/otpHelper");
+const { sendMessage } = require("../utils/sendMessage");
+const { PHONE_VERIFICATION_MESSAGE } = require("../constants/message-constants.js");
 
 const register = async (req, res) => {
   try {
@@ -156,11 +157,10 @@ const sendEmailVerificationOTP = async (req, res) => {
       email: email,
     });
 
-    const message = `Use this OTP ${otp} to verify email>`;
     await sendMail({
       to: email,
       subject: "Verify email otp",
-      text: message,
+      otp: otp,
     });
 
     res.status(200).json({
@@ -210,8 +210,8 @@ const sendMobileVerificationOTP = async (req, res) => {
       mobile: mobile,
     });
 
-    sendMessage({
-      message: `Your OTP is ${otp}`,
+    await sendMessage({
+      message: PHONE_VERIFICATION_MESSAGE(otp),
       contactNumber: mobile,
     });
 
