@@ -10,7 +10,7 @@ const sendMessage = async ({ message, contactNumber }) => {
     .create({
       body: message,
       to: contactNumber,
-      from: "+19497870631",
+      from: process.env.TWILIO_PHONE_NUM,
     })
     .then((message) => console.log(message.sid));
 };

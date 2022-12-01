@@ -2,15 +2,22 @@ const { User } = require("../models/user.js");
 const { Otp } = require("../models/otp.js");
 const _ = require("lodash");
 const bcrypt = require("bcrypt");
-const { sendMail } = require("../utils/sendEmail");
+const {
+  sendMail,
+  getEmailVerificationEmailTemplate,
+  getPasswordResetTemplate,
+} = require("../utils/mail");
 const jwt = require("jsonwebtoken");
-const { generateOTP } = require("../utils/otpHelper");
-const { sendMessage } = require("../utils/sendMessage");
+const { generateOTP, createRandomBytes } = require("../utils/helper");
+const { sendMessage } = require("../utils/message");
 const { PHONE_VERIFICATION_MESSAGE } = require("../constants/message-constants.js");
+const { ResetToken } = require("../models/resetToken.js");
 
 const register = async (req, res) => {
   try {
     data = req.body;
+
+    // check user exist with same email or not
     const newUser = User.build({
       firstName: data.firstName,
       lastName: data.lastName,
@@ -110,16 +117,53 @@ const getUserDetails = async (req, res) => {
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
-    const message = `User reset password template, Click on the link to reset password`;
-    await sendMail({
-      to: email,
-      subject: "Password reset request",
-      text: message,
+
+    if (!email) {
+      res.status(400).json({
+        status: "error",
+        message: "Check the email",
+      });
+    }
+
+    const user = await User.findOne({
+      attributes: ["email", "id"],
+      where: {
+        email: email,
+      },
+      raw: true,
     });
 
-    res.status(200).json({
-      status: "success",
-      message: "Email Sent Succesfully",
+    if (!user) {
+      return res.status(400).json({
+        status: "error",
+        message: "Invalid Email, no user exists",
+      });
+    }
+
+    console.log(user);
+    const dbtoken = await ResetToken.findOne({ owner: user.id });
+
+    if (dbtoken) {
+      return res.status(400).send({
+        status: "error",
+        message: "You can request for new token after expiry of existing token or 1 hour later",
+      });
+    }
+
+    const randomToken = createRandomBytes();
+    await ResetToken.create({ owner: user.id, token: randomToken });
+
+    await sendMail({
+      to: user.email,
+      subject: "Password Reset Link",
+      html: getPasswordResetTemplate(
+        `http://localhost:3000/reset-password?token=${randomtoken}&id=${user.id}`
+      ),
+    });
+
+    res.json({
+      success: true,
+      message: "Password reset link sent to your email!",
     });
   } catch (err) {
     console.log("file: user.js ~ line 105 ~ forgot password ~ Error", err);
@@ -161,6 +205,7 @@ const sendEmailVerificationOTP = async (req, res) => {
       to: email,
       subject: "Verify email otp",
       otp: otp,
+      html: getEmailVerificationEmailTemplate(otp),
     });
 
     res.status(200).json({
