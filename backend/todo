@@ -1,0 +1,5 @@
+1. Add proper logging, try to use file appender. ( each logger should have a request id to uniquely identify them).
+2. Docker Setup for newly created repo.
+3. Integrating Oauth Google and Apple.
+4. Deploy Node on Aws using lightsail or EBS.
+5. Check PSQL on AWS RDS

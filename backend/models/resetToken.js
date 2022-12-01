@@ -19,7 +19,7 @@ const ResetToken = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
       set(value) {
-        const hash = bcrypt.hash(value, 8);
+        const hash = bcrypt.hashSync(value, 8);
         this.setDataValue("token", hash);
       },
     },

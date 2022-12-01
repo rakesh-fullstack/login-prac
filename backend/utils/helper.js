@@ -1,4 +1,4 @@
-const defaultLength = 5;
+const defaultLength = 6;
 const crypto = require("crypto");
 
 const generateOTP = () => {
@@ -10,13 +10,9 @@ const generateOTP = () => {
   return OTP;
 };
 
-const createRandomBytes = () =>
-  new Promise((resolve, reject) => {
-    crypto.randomBytes(30, (err, buff) => {
-      if (err) reject(err);
-      const token = buff.toString("hex");
-      resolve(token);
-    });
-  });
+const createRandomBytes = () => {
+  var token = crypto.randomBytes(30).toString("hex");
+  return token;
+};
 
 module.exports = { generateOTP, createRandomBytes };

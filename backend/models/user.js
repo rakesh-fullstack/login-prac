@@ -28,7 +28,6 @@ const User = sequelize.define(
         const salt = bcrypt.genSaltSync(12);
         const hash = bcrypt.hashSync(value, salt);
         this.setDataValue("password", hash);
-        console.log(value, hash);
       },
       get() {
         return null;

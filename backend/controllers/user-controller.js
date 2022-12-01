@@ -10,14 +10,43 @@ const {
 const jwt = require("jsonwebtoken");
 const { generateOTP, createRandomBytes } = require("../utils/helper");
 const { sendMessage } = require("../utils/message");
-const { PHONE_VERIFICATION_MESSAGE } = require("../constants/message-constants.js");
+const {
+  PHONE_VERIFICATION_MESSAGE,
+  EMAIL_VERFICATION_SUBJECT,
+  FORGOT_PASSWORD_EMAIL_SUBJECT,
+} = require("../constants/message-constants.js");
 const { ResetToken } = require("../models/resetToken.js");
+const errorStatus = require("../constants/response-status.js");
+const {
+  EMAIL_EXISTS_ERROR_MESSAGE,
+  INVALID_INPUT_ERROR_MESSAGE,
+  WRONG_PASSWORD_ERROR_MESSAGE,
+  WRONG_OTP_ERROR_MESSAGE,
+  CORRECT_OTP_MESSAGE,
+  EMAIL_NOT_FOUND_ERROR_MESSAGE,
+  OTP_SENT_MESSAGE,
+  OTP_NOT_GENERATED,
+} = require("../constants/error-constants.js");
+const responseStatus = require("../constants/response-status.js");
 
 const register = async (req, res) => {
   try {
     data = req.body;
 
-    // check user exist with same email or not
+    const user = await User.findOne({
+      attributes: ["email", "password"],
+      where: {
+        email: data.email,
+      },
+      raw: true,
+    });
+
+    if (user) {
+      return sendError(res, 403, EMAIL_EXISTS_ERROR_MESSAGE);
+    }
+
+    // Validate data
+
     const newUser = User.build({
       firstName: data.firstName,
       lastName: data.lastName,
@@ -32,14 +61,11 @@ const register = async (req, res) => {
 
     res.status(200).json({
       data: { user: newUser },
-      status: "success",
+      status: responseStatus.SUCCESS,
     });
   } catch (err) {
-    console.log("file: user.js ~ line 23 ~ register ~ Error", err);
-    res.status(500).json({
-      status: "error",
-      message: err.toString(),
-    });
+    console.log("Register ~ Error", err);
+    return sendError(res, 500, err.toString());
   }
 };
 
@@ -47,10 +73,7 @@ const login = async (req, res) => {
   const { email, password } = req.body;
 
   if (_.isEmpty(email) || _.isEmpty(password)) {
-    return res.status(400).send({
-      status: "error",
-      message: "Please check the input",
-    });
+    return sendError(res, 400, INVALID_INPUT_ERROR_MESSAGE);
   }
 
   const user = await User.findOne({
@@ -62,10 +85,7 @@ const login = async (req, res) => {
   });
 
   if (_.isEmpty(user)) {
-    return res.status(401).send({
-      status: "error",
-      message: "No such user exists, please check mail",
-    });
+    return sendError(res, 401, EMAIL_NOT_FOUND_ERROR_MESSAGE);
   }
 
   bcrypt.compare(password, user.password, (err, data) => {
@@ -77,14 +97,11 @@ const login = async (req, res) => {
       const accessToken = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET);
 
       return res.status(200).json({
-        status: "success",
+        status: responseStatus.SUCCESS,
         accessToken: accessToken,
       });
     } else {
-      return res.status(401).json({
-        status: "error",
-        message: "Wrong password, please try again",
-      });
+      return sendError(res, 401, WRONG_PASSWORD_ERROR_MESSAGE);
     }
   });
 };
@@ -103,14 +120,11 @@ const getUserDetails = async (req, res) => {
       data: {
         user,
       },
-      status: "success",
+      status: responseStatus.SUCCESS,
     });
   } catch (err) {
     console.log("getUserDetails ~ Error", err);
-    res.status(500).json({
-      status: "error",
-      message: err,
-    });
+    return sendError(res, 500, err.toString());
   }
 };
 
@@ -119,10 +133,7 @@ const forgotPassword = async (req, res) => {
     const { email } = req.body;
 
     if (!email) {
-      res.status(400).json({
-        status: "error",
-        message: "Check the email",
-      });
+      return sendError(res, 401, INVALID_INPUT_ERROR_MESSAGE);
     }
 
     const user = await User.findOne({
@@ -134,43 +145,39 @@ const forgotPassword = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(400).json({
-        status: "error",
-        message: "Invalid Email, no user exists",
-      });
+      return sendError(res, 403, EMAIL_NOT_FOUND_ERROR_MESSAGE);
     }
 
     console.log(user);
-    const dbtoken = await ResetToken.findOne({ owner: user.id });
+    const dbtoken = await ResetToken.findOne({ where: { owner: user.id } });
 
     if (dbtoken) {
-      return res.status(400).send({
-        status: "error",
-        message: "You can request for new token after expiry of existing token or 1 hour later",
-      });
+      return sendError(
+        res,
+        403,
+        "You can request for new token after expiry of existing token or 1 hour later"
+      );
     }
 
-    const randomToken = createRandomBytes();
-    await ResetToken.create({ owner: user.id, token: randomToken });
+    const randomToken = await createRandomBytes();
+    const resetToken = ResetToken.build({ owner: user.id, token: randomToken });
+    await resetToken.save();
 
     await sendMail({
       to: user.email,
-      subject: "Password Reset Link",
+      subject: FORGOT_PASSWORD_EMAIL_SUBJECT,
       html: getPasswordResetTemplate(
-        `http://localhost:3000/reset-password?token=${randomtoken}&id=${user.id}`
+        `http://localhost:3000/reset-password?token=${randomToken}&id=${user.id}`
       ),
     });
 
-    res.json({
-      success: true,
+    res.status(200).json({
+      status: responseStatus.SUCCESS,
       message: "Password reset link sent to your email!",
     });
   } catch (err) {
-    console.log("file: user.js ~ line 105 ~ forgot password ~ Error", err);
-    res.status(500).json({
-      status: "error",
-      message: err,
-    });
+    console.log(" forgot password ~ Error", err);
+    return sendError(res, 500, err.toString());
   }
 };
 
@@ -193,6 +200,11 @@ const resetPassword = async (req, res) => {
 const sendEmailVerificationOTP = async (req, res) => {
   try {
     const { email } = req.body;
+
+    if (!email) {
+      return sendError(res, 400, INVALID_INPUT_ERROR_MESSAGE);
+    }
+
     const otp = generateOTP();
 
     await Otp.create({
@@ -203,50 +215,54 @@ const sendEmailVerificationOTP = async (req, res) => {
 
     await sendMail({
       to: email,
-      subject: "Verify email otp",
+      subject: EMAIL_VERFICATION_SUBJECT,
       otp: otp,
       html: getEmailVerificationEmailTemplate(otp),
     });
 
-    res.status(200).json({
-      status: "success",
-      message: "Email Otp sent",
+    return res.status(200).json({
+      status: responseStatus.SUCCESS,
+      message: OTP_SENT_MESSAGE,
     });
   } catch (err) {
-    res.status(200).json({
-      status: "error",
-      message: "Error while sending the mail",
-    });
+    return sendError(res, 403, err.toString());
   }
 };
 
 const verifyEmail = async (req, res) => {
   const { email, userOtp } = req.body;
 
+  if (!email || !userOtp) {
+    return sendError(res, 400, INVALID_INPUT_ERROR_MESSAGE);
+  }
+
   const otp = await Otp.findOne({
     where: { email: email },
     order: [["createdAt", "DESC"]],
     raw: true,
   });
+
+  if (!otp) {
+    return sendError(res, 403, OTP_NOT_GENERATED);
+  }
   const sentOtp = otp.otp;
 
   if (sentOtp != userOtp) {
-    return res.status(200).json({
-      status: "error",
-      message: "Wrong Otp, please try again",
-    });
+    return sendError(res, 403, WRONG_OTP_ERROR_MESSAGE);
   }
 
-  // update isEmailVerified in user table
   return res.status(200).json({
-    status: "success",
-    message: "Correct OTP, Email verified",
+    status: responseStatus.SUCCESS,
+    message: CORRECT_OTP_MESSAGE,
   });
 };
 
 const sendMobileVerificationOTP = async (req, res) => {
   try {
     const { mobile } = req.body;
+    if (!mobile) {
+      return sendError(res, 400, INVALID_INPUT_ERROR_MESSAGE);
+    }
     const otp = generateOTP();
 
     await Otp.create({
@@ -261,39 +277,47 @@ const sendMobileVerificationOTP = async (req, res) => {
     });
 
     res.status(200).json({
-      status: "success",
-      message: "Mobile Otp sent",
+      status: responseStatus.SUCCESS,
+      message: OTP_SENT_MESSAGE,
     });
   } catch (err) {
-    console.log(err);
-    res.status(500).json({
-      status: "error",
-      message: "Error while sending the mail",
-    });
+    return sendError(res, 500, err.toString());
   }
 };
 
 const verifyMobile = async (req, res) => {
   const { mobile, userOtp } = req.body;
 
+  if (!mobile || !userOtp) {
+    return sendError(res, 400, INVALID_INPUT_ERROR_MESSAGE);
+  }
+
   const otp = await Otp.findOne({
     where: { mobile: mobile },
     order: [["createdAt", "DESC"]],
     raw: true,
   });
+
+  if (!otp) {
+    return sendError(res, 403, OTP_NOT_GENERATED);
+  }
+
   const sentOtp = otp.otp;
 
   if (sentOtp != userOtp) {
-    return res.status(200).json({
-      status: "error",
-      message: "Wrong Otp, please try again",
-    });
+    return sendError(res, 403, WRONG_OTP_ERROR_MESSAGE);
   }
-  // update isMobileVeried in user table
 
   return res.status(200).json({
-    status: "success",
-    message: "Correct OTP, mobile verified",
+    status: responseStatus.SUCCESS,
+    message: CORRECT_OTP_MESSAGE,
+  });
+};
+
+const sendError = (res, status, message) => {
+  return res.status(status).send({
+    status: errorStatus.ERROR,
+    message: message,
   });
 };
 
