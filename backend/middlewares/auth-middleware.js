@@ -9,15 +9,15 @@ const authenticate = async (req, res, next) => {
       status: "error",
       message: "User doesn't have access",
     });
+  } else {
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+      if (err) return res.status(403).send();
+      else {
+        req.user = user;
+        next();
+      }
+    });
   }
-
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
-    if (err) return res.status(403).send();
-
-    req.user = user;
-  });
-
-  next();
 };
 
 module.exports = { authenticate };
