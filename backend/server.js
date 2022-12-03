@@ -12,11 +12,11 @@ const PORT = process.env.PORT || 8000;
 app.use(morgan("tiny"));
 app.use(express.json());
 
-app.use("/health", (req, res) => {
-  res.status(200).send("System is Up");
-});
-
 app.use("/user/", UserRouter);
+
+app.use("/", (req, res) => {
+  res.status(200).send("Nodejs Server is Running");
+});
 
 app.listen(PORT, () => {
   console.log(`Server started on Port: ${PORT}`);
