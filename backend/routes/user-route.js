@@ -14,13 +14,13 @@ const {
 const { authenticate } = require("../middlewares/auth-middleware");
 
 router.post("/register", register);
-router.get("/login", login);
+router.post("/login", login);
 router.get("/getUserDetails", authenticate, getUserDetails);
-router.get("/forgotPassword", forgotPassword);
-router.get("/resetPassword", resetPassword);
-router.get("/sendEmailVerificationOTP", sendEmailVerificationOTP);
-router.get("/verifyEmail", verifyEmail);
-router.get("/sendMobileVerificationOTP", sendMobileVerificationOTP);
-router.get("/verifyMobile", verifyMobile);
+router.post("/forgotPassword", forgotPassword);
+router.post("/resetPassword", resetPassword);
+router.post("/sendEmailVerificationOTP", sendEmailVerificationOTP);
+router.post("/verifyEmail", verifyEmail);
+router.post("/sendMobileVerificationOTP", sendMobileVerificationOTP);
+router.post("/verifyMobile", verifyMobile);
 
 module.exports = router;
